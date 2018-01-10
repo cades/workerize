@@ -55,30 +55,29 @@ export default function workerize(code) {
 		};
 		*/
 		ctx.addEventListener('message', ({ data }) => {
-			if (data.type==='RPC') {
-				let id = data.id;
-				if (id!=null) {
-					if (data.method) {
-						let method = rpcMethods[data.method];
-						if (method==null) {
-							ctx.postMessage({ type: 'RPC', id, error: 'NO_SUCH_METHOD' });
-						}
-						else {
-							Promise.resolve()
-								.then( () => method.apply(null, data.params) )
-								.then( result => { ctx.postMessage({ type: 'RPC', id, result }); })
-								.catch( error => { ctx.postMessage({ type: 'RPC', id, error }); });
-						}
-					}
-					else {
-						let callback = callbacks[id];
-						if (callback==null) throw Error(`Unknown callback ${id}`);
-						delete callbacks[id];
-						if (data.error) callback.reject(Error(data.error));
-						else callback.resolve(data.result);
-					}
+			if (data.type!=='RPC') return;
+			let id = data.id;
+			if (id==null) return;
+			if (data.method) {
+				let method = rpcMethods[data.method];
+				if (method==null) {
+					ctx.postMessage({ type: 'RPC', id, error: 'NO_SUCH_METHOD' });
+					return;
 				}
+
+				Promise.resolve()
+					.then( () => method.apply(null, data.params) )
+					.then( result => { ctx.postMessage({ type: 'RPC', id, result }); })
+					.catch( error => { ctx.postMessage({ type: 'RPC', id, error }); });
+				return;
 			}
+
+			let callback = callbacks[id];
+			if (callback==null) throw Error(`Unknown callback ${id}`);
+			delete callbacks[id];
+			data.error
+				? callback.reject(Error(data.error))
+				: callback.resolve(data.result);
 		});
 	}
 	setup(worker, worker.rpcMethods, callbacks);
