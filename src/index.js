@@ -65,7 +65,8 @@ export default function workerize(code) {
 					return;
 				}
 
-				Promise.resolve(method.apply(null, data.params))
+				Promise.resolve()
+					.then( method.apply(null, data.params) )
 					.then( result => { ctx.postMessage({ type: 'RPC', id, result }); })
 					.catch( error => { ctx.postMessage({ type: 'RPC', id, error }); });
 				return;
